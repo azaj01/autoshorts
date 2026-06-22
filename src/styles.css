@@ -1,0 +1,535 @@
+:root {
+  color: #17191f;
+  background: #eff2f5;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 980px;
+  min-height: 100vh;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  border: 0;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  min-height: 100vh;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 24px;
+  color: #f7f8f9;
+  background: #20252e;
+  border-right: 1px solid #141820;
+}
+
+.brand-row {
+  display: grid;
+  grid-template-columns: 46px 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  color: #101318;
+  background: #8ee6c7;
+  border-radius: 8px;
+}
+
+.brand-row h1,
+.brand-row p,
+.topbar h2,
+.panel-heading h3,
+.candidate-card h4,
+.empty-workspace h2 {
+  margin: 0;
+}
+
+.brand-row h1 {
+  font-size: 24px;
+  line-height: 1.05;
+}
+
+.brand-row p {
+  margin-top: 4px;
+  color: #b9c0ca;
+  font-size: 13px;
+}
+
+.primary-action,
+.button-pair button,
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  border-radius: 8px;
+  font-weight: 700;
+}
+
+.primary-action {
+  width: 100%;
+  padding: 0 14px;
+  color: #111419;
+  background: #8ee6c7;
+}
+
+.primary-action.compact {
+  width: auto;
+  min-width: 190px;
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 10px;
+  color: #aeb6c2;
+  background: #2b323d;
+  border: 1px solid #38414d;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.status-pill.active {
+  color: #dff8ec;
+  background: #214334;
+  border-color: #2f7856;
+}
+
+.key-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.key-stack label {
+  display: grid;
+  gap: 6px;
+}
+
+.key-stack span {
+  color: #c9d0d8;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.key-stack input {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 10px;
+  color: #f8fafb;
+  background: #171b22;
+  border: 1px solid #3b4451;
+  border-radius: 8px;
+  outline: none;
+}
+
+.key-stack input:focus {
+  border-color: #8ee6c7;
+}
+
+.project-list {
+  display: grid;
+  gap: 8px;
+  min-height: 0;
+  overflow: auto;
+}
+
+.project-row {
+  display: grid;
+  grid-template-columns: 18px 1fr 16px;
+  gap: 10px;
+  align-items: center;
+  min-height: 42px;
+  padding: 0 10px;
+  color: #ced6df;
+  background: #2b323d;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  text-align: left;
+}
+
+.project-row span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-row.active {
+  color: #ffffff;
+  border-color: #8ee6c7;
+}
+
+.workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+  padding: 24px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.eyebrow {
+  margin-bottom: 4px;
+  color: #607080;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.topbar h2 {
+  color: #17191f;
+  font-size: 28px;
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+}
+
+.icon-button {
+  width: 42px;
+  height: 42px;
+  color: #20252e;
+  background: #ffffff;
+  border: 1px solid #d7dde4;
+}
+
+.error-banner {
+  padding: 12px 14px;
+  color: #6e1d2f;
+  background: #ffe4e6;
+  border: 1px solid #f3a6af;
+  border-radius: 8px;
+  font-weight: 700;
+}
+
+.pipeline-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.pipeline-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  color: #596673;
+  background: #ffffff;
+  border: 1px solid #d9e0e7;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.pipeline-step.done {
+  color: #143b2b;
+  background: #dff8ec;
+  border-color: #8eddbf;
+}
+
+.work-grid {
+  display: grid;
+  grid-template-columns: minmax(420px, 0.95fr) minmax(460px, 1.05fr);
+  gap: 18px;
+  min-height: 0;
+  flex: 1;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 560px;
+  background: #ffffff;
+  border: 1px solid #d7dde4;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid #e1e6eb;
+}
+
+.panel-heading h3 {
+  font-size: 17px;
+}
+
+.panel-heading p {
+  margin: 4px 0 0;
+  color: #6a7684;
+  font-size: 13px;
+}
+
+.button-pair {
+  display: flex;
+  gap: 8px;
+}
+
+.button-pair button {
+  min-width: 92px;
+  padding: 0 12px;
+  color: #1d2731;
+  background: #edf2f6;
+  border: 1px solid #d3dbe4;
+  font-size: 13px;
+}
+
+.transcript-list,
+.candidate-list {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-height: 0;
+  padding: 14px;
+  overflow: auto;
+}
+
+.segment-row {
+  display: grid;
+  grid-template-columns: 54px 1fr;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #eef1f4;
+}
+
+.segment-row span {
+  color: #607080;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.segment-row p {
+  margin: 0;
+  color: #242b34;
+  line-height: 1.45;
+}
+
+.clip-control {
+  display: grid;
+  grid-template-columns: 24px 1fr 36px;
+  gap: 10px;
+  align-items: center;
+  min-height: 52px;
+  padding: 0 16px;
+  border-bottom: 1px solid #e1e6eb;
+}
+
+.clip-control input {
+  accent-color: #267b5f;
+}
+
+.candidate-card {
+  display: grid;
+  grid-template-columns: 54px 1fr;
+  gap: 12px;
+  padding: 14px;
+  background: #f7f9fb;
+  border: 1px solid #dde4eb;
+  border-radius: 8px;
+}
+
+.candidate-card.selected {
+  background: #eefaf5;
+  border-color: #8eddbf;
+}
+
+.candidate-rank {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 8px;
+  min-height: 62px;
+  color: #244233;
+  font-weight: 900;
+}
+
+.candidate-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #657281;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.candidate-card h4 {
+  margin-top: 6px;
+  color: #17191f;
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+.candidate-card p {
+  margin: 8px 0 0;
+  color: #4c5966;
+  line-height: 1.45;
+}
+
+.candidate-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.clip-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 9px;
+  color: #5e6b79;
+  background: #eef2f6;
+  border: 1px solid #d7dfe7;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: capitalize;
+}
+
+.clip-status.ready {
+  color: #143b2b;
+  background: #dff8ec;
+  border-color: #8eddbf;
+}
+
+.clip-status.error {
+  color: #6e1d2f;
+  background: #ffe4e6;
+  border-color: #f3a6af;
+}
+
+.cut-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 86px;
+  min-height: 34px;
+  padding: 0 12px;
+  color: #111419;
+  background: #8ee6c7;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.output-path,
+.render-log {
+  margin-top: 10px;
+  padding: 9px 10px;
+  overflow-wrap: anywhere;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.output-path {
+  color: #345240;
+  background: #eefaf5;
+}
+
+.render-log {
+  color: #6e1d2f;
+  background: #fff0f1;
+}
+
+.empty-state,
+.empty-workspace {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 14px;
+  min-height: 280px;
+  color: #6c7988;
+}
+
+.empty-workspace {
+  flex: 1;
+  min-height: 70vh;
+}
+
+.empty-workspace h2 {
+  color: #17191f;
+  font-size: 36px;
+}
+
+.spin {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 1120px) {
+  body {
+    min-width: 0;
+  }
+
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    min-height: auto;
+  }
+
+  .work-grid,
+  .pipeline-strip {
+    grid-template-columns: 1fr;
+  }
+}
