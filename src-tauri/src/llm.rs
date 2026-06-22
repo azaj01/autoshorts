@@ -31,11 +31,11 @@ pub async fn detect_candidates_with_claude(
 ) -> Result<Vec<CandidateDraft>> {
     let segments = compact_segments(&transcript.segments);
     let prompt = format!(
-        "You are identifying the strongest short-form clip candidates from a long-form transcript. \
-For each candidate, the clip must be self-contained, hook-driven within the first 3 seconds, \
-30-90 seconds long, and cut at clean sentence/thought boundaries. Favor concrete stories, \
-strong opinions, emotional turns, surprising claims, clear payoffs, and audience reactions. \
-Avoid rambling setup, context dependence, and pure filler. Return up to 10 candidates as JSON only: \
+        "You are identifying the most viral moments and strongest short-form clip candidates from a long-form transcript. \
+For each candidate, the clip must be self-contained, starting with an extremely engaging hook within the first 3 seconds (to capture immediate attention on social feeds), \
+30-90 seconds long, and cut at clean sentence/thought boundaries. Favor highly shareable content: concrete stories, \
+strong opinions, emotional turns, surprising or counter-intuitive claims, clear payoffs, and high-energy/dramatic peaks. \
+Avoid rambling setup, context-dependent references, and pure filler. Return up to 10 candidates as JSON only: \
 {{\"candidates\":[{{\"start\":0,\"end\":0,\"score\":0.0,\"hook\":\"...\",\"rationale\":\"...\"}}]}}\n\nTranscript:\n{segments}"
     );
 

@@ -117,13 +117,28 @@ pub fn render_flat_clip(
 
     let start = format!("{start_sec:.3}");
     let end = format!("{end_sec:.3}");
-    let output = Command::new("ffmpeg")
-        .args(["-y", "-i", source_path, "-ss", &start, "-to", &end])
-        .args(["-c:v", "libx264", "-preset", "fast", "-crf", "18"])
-        .args(["-c:a", "aac", "-b:a", "192k"])
-        .arg(output_path)
-        .output()
-        .context("running ffmpeg clip render")?;
+
+    let probe = probe_media(source_path).ok();
+    let has_video = probe.map(|p| p.has_video).unwrap_or(false);
+
+    let mut cmd = Command::new("ffmpeg");
+    cmd.args(["-y", "-i", source_path, "-ss", &start, "-to", &end]);
+
+    if has_video {
+        // Crop video to 9:16 portrait/vertical format while ensuring dimensions are even
+        cmd.args([
+            "-vf",
+            "crop=w='2*trunc(min(iw,ih*9/16)/2)':h='2*trunc(min(ih,iw*16/9)/2)'",
+        ]);
+        cmd.args(["-c:v", "libx264", "-preset", "fast", "-crf", "18", "-pix_fmt", "yuv420p"]);
+    } else {
+        cmd.arg("-vn");
+    }
+
+    cmd.args(["-c:a", "aac", "-b:a", "192k"]);
+    cmd.arg(output_path);
+
+    let output = cmd.output().context("running ffmpeg clip render")?;
 
     if !output.status.success() {
         return Err(anyhow!(
