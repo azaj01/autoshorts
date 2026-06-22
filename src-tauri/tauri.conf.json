@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Shortcast",
+  "productName": "AutoShorts",
   "version": "0.1.0",
-  "identifier": "com.shortcast.desktop",
+  "identifier": "com.autoshorts.desktop",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://127.0.0.1:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Shortcast",
+        "title": "AutoShorts",
         "width": 1280,
         "height": 840,
         "minWidth": 1040,

@@ -271,7 +271,7 @@ pub fn run() {
                 .app_data_dir()
                 .context("resolving app data directory")?;
             std::fs::create_dir_all(&data_dir).context("creating app data directory")?;
-            let db = Database::open(&data_dir.join("shortcast.sqlite"))?;
+            let db = Database::open(&data_dir.join("autoshorts.sqlite"))?;
             app.manage(AppState { db, data_dir });
             Ok(())
         })
@@ -289,7 +289,7 @@ pub fn run() {
             render_flat_clip_for_candidate
         ])
         .run(tauri::generate_context!())
-        .expect("error while running Shortcast");
+        .expect("error while running AutoShorts");
 }
 
 fn project_dir(state: &AppState, project_id: &str) -> PathBuf {
@@ -300,7 +300,7 @@ fn documents_project_dir(project: &Project) -> Result<PathBuf, String> {
     let documents_dir = dirs::document_dir()
         .ok_or_else(|| "Could not find your Documents folder for clip output.".to_string())?;
     Ok(documents_dir
-        .join("Shortcast")
+        .join("AutoShorts")
         .join(project_output_slug(project)))
 }
 
@@ -356,7 +356,7 @@ fn demo_transcript() -> NormalizedTranscript {
         "The creator still decides what represents them, but the machine removes the first exhausting pass through hours of footage.",
         "The goal is not to automate taste completely. The goal is to give taste a faster starting point.",
         "Once the strongest moments are visible, captions and platform copy become finishing work instead of discovery work.",
-        "That is the workflow Shortcast is designed around.",
+        "That is the workflow AutoShorts is designed around.",
     ];
 
     let mut words = Vec::new();

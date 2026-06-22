@@ -1,3 +1,3 @@
 fn main() {
-    shortcast_lib::run()
+    autoshorts_lib::run()
 }

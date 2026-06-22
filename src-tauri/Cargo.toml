@@ -1,16 +1,16 @@
 [package]
-name = "shortcast"
+name = "autoshorts"
 version = "0.1.0"
 description = "Local-first long-form to short-form clip studio"
-authors = ["Shortcast"]
+authors = ["AutoShorts"]
 edition = "2021"
 
 [lib]
-name = "shortcast_lib"
+name = "autoshorts_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [[bin]]
-name = "shortcast"
+name = "autoshorts"
 path = "src/main.rs"
 
 [build-dependencies]

@@ -106,6 +106,7 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [deepgramKey, setDeepgramKey] = useState("");
   const [anthropicKey, setAnthropicKey] = useState("");
+  const [showSettings, setShowSettings] = useState(false);
 
   const transcript = useMemo(() => {
     if (!detail?.transcript) return null;
@@ -251,207 +252,246 @@ function App() {
   }
 
   return (
-    <main className="app-shell">
-      <aside className="sidebar">
-        <div className="brand-row">
-          <div className="brand-mark">
-            <Clapperboard size={22} />
+    <div className="app-shell-container">
+      <main className="app-shell">
+        <aside className="sidebar">
+          <div className="brand-row">
+            <div className="brand-mark">
+              <Clapperboard size={20} />
+            </div>
+            <div>
+              <h1>AutoShorts</h1>
+              <p>Long recording in. Short clips out.</p>
+            </div>
           </div>
-          <div>
-            <h1>Shortcast</h1>
-            <p>Long recording in. Short clips out.</p>
-          </div>
-        </div>
 
-        <button className="primary-action" onClick={importMedia} disabled={busy !== "idle"}>
-          {busy === "import" ? <Loader2 className="spin" size={18} /> : <FileVideo size={18} />}
-          Import recording
-        </button>
+          <button className="primary-action" onClick={importMedia} disabled={busy !== "idle"}>
+            {busy === "import" ? <Loader2 className="spin" size={18} /> : <FileVideo size={18} />}
+            Import recording
+          </button>
 
-        <div className="status-grid">
-          <StatusPill label="ffmpeg" active={environment?.hasFfmpeg} />
-          <StatusPill label="ffprobe" active={environment?.hasFfprobe} />
-          <StatusPill label="Deepgram" active={environment?.hasDeepgramKey || deepgramKey.length > 0} />
-          <StatusPill label="Claude" active={environment?.hasAnthropicKey || anthropicKey.length > 0} />
-        </div>
-
-        <div className="key-stack">
-          <label>
-            <span>Deepgram key</span>
-            <input
-              value={deepgramKey}
-              onChange={(event) => setDeepgramKey(event.target.value)}
-              placeholder={environment?.hasDeepgramKey ? "Loaded from env" : "Optional"}
-              type="password"
-            />
-          </label>
-          <label>
-            <span>Claude key</span>
-            <input
-              value={anthropicKey}
-              onChange={(event) => setAnthropicKey(event.target.value)}
-              placeholder={environment?.hasAnthropicKey ? "Loaded from env" : "Optional"}
-              type="password"
-            />
-          </label>
-        </div>
-
-        <section className="project-list" aria-label="Projects">
-          {projects.map((project) => (
-            <button
-              key={project.id}
-              className={`project-row ${detail?.project.id === project.id ? "active" : ""}`}
-              onClick={() => void selectProject(project.id)}
-            >
-              <FileVideo size={17} />
-              <span>{fileName(project.sourcePath)}</span>
-              <ChevronRight size={16} />
-            </button>
-          ))}
-        </section>
-      </aside>
-
-      <section className="workspace">
-        {detail ? (
-          <>
-            <header className="topbar">
-              <div>
-                <div className="eyebrow">{detail.project.status}</div>
-                <h2>{fileName(detail.project.sourcePath)}</h2>
-              </div>
-              <button className="icon-button" onClick={() => void refresh(detail.project.id)} title="Refresh">
-                <RefreshCw size={18} />
+          <section className="project-list" aria-label="Projects">
+            {projects.map((project) => (
+              <button
+                key={project.id}
+                className={`project-row ${detail?.project.id === project.id ? "active" : ""}`}
+                onClick={() => void selectProject(project.id)}
+              >
+                <FileVideo size={15} />
+                <span>{fileName(project.sourcePath)}</span>
+                <ChevronRight size={14} />
               </button>
-            </header>
+            ))}
+          </section>
+        </aside>
 
-            {error && <div className="error-banner">{error}</div>}
+        <section className="workspace">
+          {detail ? (
+            <>
+              <header className="topbar">
+                <div className="project-info">
+                  <div className="eyebrow">{detail.project.status}</div>
+                  <h2>{fileName(detail.project.sourcePath)}</h2>
+                </div>
+                <div className="topbar-actions">
+                  <button 
+                    className={`icon-button settings-toggle ${showSettings ? "active" : ""}`}
+                    onClick={() => setShowSettings(!showSettings)}
+                    title="API Settings"
+                  >
+                    <SlidersHorizontal size={16} />
+                    <span>API Settings</span>
+                  </button>
+                  <button className="icon-button" onClick={() => void refresh(detail.project.id)} title="Refresh">
+                    <RefreshCw size={18} />
+                  </button>
+                </div>
+              </header>
 
-            <div className="pipeline-strip">
-              <PipelineStep icon={<AudioLines size={18} />} label="Transcript" done={Boolean(detail.transcript)} />
-              <PipelineStep icon={<Sparkles size={18} />} label="Moments" done={detail.candidates.length > 0} />
-              <PipelineStep icon={<Scissors size={18} />} label="Cut" done={selectedCount > 0 && selectedCutCount === selectedCount} />
-              <PipelineStep icon={<Captions size={18} />} label="Captions" done={false} />
-              <PipelineStep icon={<Download size={18} />} label="Export" done={false} />
-            </div>
-
-            <div className="work-grid">
-              <section className="panel transcript-panel">
-                <div className="panel-heading">
-                  <div>
-                    <h3>Transcript</h3>
-                    <p>{transcript ? `${transcript.segments.length} segments` : "No transcript"}</p>
-                  </div>
-                  <div className="button-pair">
-                    <button onClick={transcribe} disabled={busy !== "idle" || !canUseCloudKey}>
-                      {busy === "transcribe" ? <Loader2 className="spin" size={16} /> : <AudioLines size={16} />}
-                      Cloud
-                    </button>
-                    <button onClick={demoTranscript} disabled={busy !== "idle"}>
-                      {busy === "demoTranscript" ? <Loader2 className="spin" size={16} /> : <Wand2 size={16} />}
-                      Demo
-                    </button>
+              {showSettings && (
+                <div className="settings-panel">
+                  <div className="key-stack-horizontal">
+                    <label>
+                      <span>Deepgram API Key</span>
+                      <input
+                        value={deepgramKey}
+                        onChange={(event) => setDeepgramKey(event.target.value)}
+                        placeholder={environment?.hasDeepgramKey ? "Loaded from env" : "Optional (Deepgram API Key)"}
+                        type="password"
+                      />
+                    </label>
+                    <label>
+                      <span>Claude API Key</span>
+                      <input
+                        value={anthropicKey}
+                        onChange={(event) => setAnthropicKey(event.target.value)}
+                        placeholder={environment?.hasAnthropicKey ? "Loaded from env" : "Optional (Claude API Key)"}
+                        type="password"
+                      />
+                    </label>
                   </div>
                 </div>
+              )}
 
-                <div className="transcript-list">
-                  {transcript?.segments.map((segment, index) => (
-                    <article key={`${segment.start}-${index}`} className="segment-row">
-                      <span>{formatTime(segment.start)}</span>
-                      <p>{segment.text}</p>
-                    </article>
-                  )) ?? <EmptyState icon={<AudioLines size={28} />} label="Transcript pending" />}
-                </div>
-              </section>
+              {error && <div className="error-banner">{error}</div>}
 
-              <section className="panel candidate-panel">
-                <div className="panel-heading">
-                  <div>
-                    <h3>Clip Candidates</h3>
-                    <p>{detail.candidates.length ? `${selectedCount} selected` : "No candidates"}</p>
+              <div className="pipeline-strip">
+                <PipelineStep icon={<AudioLines size={16} />} label="Transcript" done={Boolean(detail.transcript)} />
+                <PipelineStep icon={<Sparkles size={16} />} label="Moments" done={detail.candidates.length > 0} />
+                <PipelineStep icon={<Scissors size={16} />} label="Cut" done={selectedCount > 0 && selectedCutCount === selectedCount} />
+                <PipelineStep icon={<Captions size={16} />} label="Captions" done={false} />
+                <PipelineStep icon={<Download size={16} />} label="Export" done={false} />
+              </div>
+
+              <div className="work-grid">
+                <section className="panel transcript-panel">
+                  <div className="panel-heading">
+                    <div>
+                      <h3>Transcript</h3>
+                      <p>{transcript ? `${transcript.segments.length} segments` : "No transcript"}</p>
+                    </div>
+                    <div className="button-pair">
+                      <button onClick={transcribe} disabled={busy !== "idle" || !canUseCloudKey}>
+                        {busy === "transcribe" ? <Loader2 className="spin" size={16} /> : <AudioLines size={16} />}
+                        Cloud
+                      </button>
+                      <button onClick={demoTranscript} disabled={busy !== "idle"}>
+                        {busy === "demoTranscript" ? <Loader2 className="spin" size={16} /> : <Wand2 size={16} />}
+                        Demo
+                      </button>
+                    </div>
                   </div>
-                  <div className="button-pair">
-                    <button onClick={cutSelected} disabled={busy !== "idle" || selectedCount === 0 || !environment?.hasFfmpeg}>
-                      {busy === "cut" ? <Loader2 className="spin" size={16} /> : <Scissors size={16} />}
-                      Cut
-                    </button>
-                    <button onClick={() => void moments(false)} disabled={busy !== "idle" || !detail.transcript || !canUseClaude}>
-                      {busy === "moments" ? <Loader2 className="spin" size={16} /> : <Sparkles size={16} />}
-                      Claude
-                    </button>
-                    <button onClick={() => void moments(true)} disabled={busy !== "idle" || !detail.transcript}>
-                      {busy === "moments" ? <Loader2 className="spin" size={16} /> : <Wand2 size={16} />}
-                      Demo
-                    </button>
-                  </div>
-                </div>
 
-                {detail.candidates.length > 0 && (
-                  <div className="clip-control">
-                    <SlidersHorizontal size={17} />
-                    <input
-                      type="range"
-                      min="0"
-                      max={detail.candidates.length}
-                      value={selectedCount}
-                      onChange={(event) => void updateClipCount(Number(event.target.value))}
-                    />
-                    <strong>{selectedCount}</strong>
-                  </div>
-                )}
-
-                <div className="candidate-list">
-                  {detail.candidates.map((candidate) => {
-                    const clip = clipByCandidate.get(candidate.id);
-                    const isCut = clip?.status === "done" && Boolean(clip.outputPath);
-                    return (
-                      <article key={candidate.id} className={`candidate-card ${candidate.selected ? "selected" : ""}`}>
-                        <div className="candidate-rank">
-                          <span>#{candidate.rank}</span>
-                          {candidate.selected && <Check size={15} />}
-                        </div>
-                        <div className="candidate-body">
-                          <div className="candidate-meta">
-                            <span>{formatTime(candidate.startSec)}-{formatTime(candidate.endSec)}</span>
-                            <span>{Math.round(candidate.score * 100)}%</span>
-                          </div>
-                          <h4>{candidate.hook}</h4>
-                          <p>{candidate.rationale}</p>
-                          <div className="candidate-actions">
-                            <span className={`clip-status ${isCut ? "ready" : clip?.status === "error" ? "error" : ""}`}>
-                              {isCut ? "Cut ready" : clip?.status === "error" ? "Cut failed" : clip?.status ?? "Pending"}
-                            </span>
-                            <button
-                              className="cut-button"
-                              onClick={() => void cutCandidate(candidate.id)}
-                              disabled={busy !== "idle" || !environment?.hasFfmpeg}
-                            >
-                              {busy === "cut" ? <Loader2 className="spin" size={15} /> : <Scissors size={15} />}
-                              {isCut ? "Re-cut" : "Cut"}
-                            </button>
-                          </div>
-                          {clip?.outputPath && <div className="output-path">{clip.outputPath}</div>}
-                          {clip?.renderLog && <div className="render-log">{clip.renderLog}</div>}
-                        </div>
+                  <div className="transcript-list">
+                    {transcript?.segments.map((segment, index) => (
+                      <article key={`${segment.start}-${index}`} className="segment-row">
+                        <span>{formatTime(segment.start)}</span>
+                        <p>{segment.text}</p>
                       </article>
-                    );
-                  })}
-                  {detail.candidates.length === 0 && <EmptyState icon={<Sparkles size={28} />} label="Moments pending" />}
-                </div>
-              </section>
+                    )) ?? <EmptyState icon={<AudioLines size={28} />} label="Transcript pending" />}
+                  </div>
+                </section>
+
+                <section className="panel candidate-panel">
+                  <div className="panel-heading">
+                    <div>
+                      <h3>Clip Candidates</h3>
+                      <p>{detail.candidates.length ? `${selectedCount} selected` : "No candidates"}</p>
+                    </div>
+                    <div className="button-pair">
+                      <button onClick={cutSelected} disabled={busy !== "idle" || selectedCount === 0 || !environment?.hasFfmpeg}>
+                        {busy === "cut" ? <Loader2 className="spin" size={16} /> : <Scissors size={16} />}
+                        Cut
+                      </button>
+                      <button onClick={() => void moments(false)} disabled={busy !== "idle" || !detail.transcript || !canUseClaude}>
+                        {busy === "moments" ? <Loader2 className="spin" size={16} /> : <Sparkles size={16} />}
+                        Claude
+                      </button>
+                      <button onClick={() => void moments(true)} disabled={busy !== "idle" || !detail.transcript}>
+                        {busy === "moments" ? <Loader2 className="spin" size={16} /> : <Wand2 size={16} />}
+                        Demo
+                      </button>
+                    </div>
+                  </div>
+
+                  {detail.candidates.length > 0 && (
+                    <div className="clip-control">
+                      <SlidersHorizontal size={17} />
+                      <input
+                        type="range"
+                        min="0"
+                        max={detail.candidates.length}
+                        value={selectedCount}
+                        onChange={(event) => void updateClipCount(Number(event.target.value))}
+                      />
+                      <strong>{selectedCount}</strong>
+                    </div>
+                  )}
+
+                  <div className="candidate-list">
+                    {detail.candidates.map((candidate) => {
+                      const clip = clipByCandidate.get(candidate.id);
+                      const isCut = clip?.status === "done" && Boolean(clip.outputPath);
+                      return (
+                        <article key={candidate.id} className={`candidate-card ${candidate.selected ? "selected" : ""}`}>
+                          {/* 9:16 portrait mockup preview placeholder representing vertical formats */}
+                          <div className="portrait-preview-container">
+                            <div className="portrait-preview-mock">
+                              {isCut ? (
+                                <div className="mock-video-active">
+                                  <Play size={20} className="play-icon-mock" />
+                                </div>
+                              ) : (
+                                <div className="mock-video-inactive">
+                                  <span>9:16</span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="candidate-rank">
+                              <span>#{candidate.rank}</span>
+                              {candidate.selected && <Check size={14} />}
+                            </div>
+                          </div>
+                          
+                          <div className="candidate-body">
+                            <div className="candidate-meta">
+                              <span>{formatTime(candidate.startSec)} - {formatTime(candidate.endSec)}</span>
+                              <span className="candidate-score">{Math.round(candidate.score * 100)}% Match</span>
+                            </div>
+                            <h4>{candidate.hook}</h4>
+                            <p className="candidate-rationale">{candidate.rationale}</p>
+                            
+                            <div className="candidate-actions">
+                              <span className={`clip-status ${isCut ? "ready" : clip?.status === "error" ? "error" : ""}`}>
+                                {isCut ? "Cut ready" : clip?.status === "error" ? "Cut failed" : clip?.status ?? "Pending"}
+                              </span>
+                              <button
+                                className="cut-button"
+                                onClick={() => void cutCandidate(candidate.id)}
+                                disabled={busy !== "idle" || !environment?.hasFfmpeg}
+                              >
+                                {busy === "cut" ? <Loader2 className="spin" size={14} /> : <Scissors size={14} />}
+                                {isCut ? "Re-cut" : "Cut"}
+                              </button>
+                            </div>
+                            {clip?.outputPath && <div className="output-path">{clip.outputPath}</div>}
+                            {clip?.renderLog && <div className="render-log">{clip.renderLog}</div>}
+                          </div>
+                        </article>
+                      );
+                    })}
+                    {detail.candidates.length === 0 && <EmptyState icon={<Sparkles size={28} />} label="Moments pending" />}
+                  </div>
+                </section>
+              </div>
+            </>
+          ) : (
+            <div className="empty-workspace">
+              <Clapperboard size={46} />
+              <h2>AutoShorts</h2>
+              <button className="primary-action compact" onClick={importMedia}>
+                <FileVideo size={18} />
+                Import recording
+              </button>
             </div>
-          </>
-        ) : (
-          <div className="empty-workspace">
-            <Clapperboard size={46} />
-            <h2>Shortcast</h2>
-            <button className="primary-action compact" onClick={importMedia}>
-              <FileVideo size={18} />
-              Import recording
-            </button>
+          )}
+        </section>
+      </main>
+
+      <footer className="status-bar">
+        <div className="status-bar-left">
+          <span className="app-status-indicator">System Ready</span>
+        </div>
+        <div className="status-bar-right">
+          <div className="status-indicators">
+            <span className={`indicator ${environment?.hasFfmpeg ? "active" : ""}`} title="FFmpeg status">ffmpeg</span>
+            <span className={`indicator ${environment?.hasFfprobe ? "active" : ""}`} title="FFprobe status">ffprobe</span>
+            <span className={`indicator ${canUseCloudKey ? "active" : ""}`} title="Deepgram Key status">Deepgram</span>
+            <span className={`indicator ${canUseClaude ? "active" : ""}`} title="Claude Key status">Claude</span>
           </div>
-        )}
-      </section>
-    </main>
+        </div>
+      </footer>
+    </div>
   );
 }
 
