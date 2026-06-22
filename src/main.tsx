@@ -141,7 +141,7 @@ function App() {
     void refresh();
   }, []);
 
-  async function refresh(nextProjectId = detail?.project.id) {
+  async function refresh(nextProjectId?: string) {
     setError(null);
     const [env, projectList] = await Promise.all([
       invoke<EnvironmentStatus>("environment_status"),
@@ -150,9 +150,8 @@ function App() {
     setEnvironment(env);
     setProjects(projectList);
 
-    const projectId = nextProjectId ?? projectList[0]?.id;
-    if (projectId) {
-      const nextDetail = await invoke<ProjectDetail>("get_project_detail", { projectId });
+    if (nextProjectId) {
+      const nextDetail = await invoke<ProjectDetail>("get_project_detail", { projectId: nextProjectId });
       setDetail(nextDetail);
     } else {
       setDetail(null);
