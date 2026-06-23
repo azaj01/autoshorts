@@ -28,6 +28,11 @@ To run or build the application from source:
     ```bash
     brew install ffmpeg
     ```
+    *Note: To ensure full captions rendering support (specifically the `drawtext` and `subtitles` filter dependencies), it is recommended to use a complete, full-featured FFmpeg build. If you encounter any filter issues, tap and install the `homebrew-ffmpeg` formula:*
+    ```bash
+    brew tap homebrew-ffmpeg/ffmpeg
+    brew install homebrew-ffmpeg/ffmpeg/ffmpeg
+    ```
 
 ---
 

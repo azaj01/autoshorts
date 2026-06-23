@@ -38,6 +38,7 @@ type Project = {
   sourceDuration: number | null;
   status: string;
   transcriptionMode: string;
+  captionStyle?: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -111,6 +112,10 @@ function App() {
   const [anthropicKey, setAnthropicKey] = useState("");
   const [deepseekKey, setDeepseekKey] = useState("");
   const [showSettings, setShowSettings] = useState(false);
+  const [renderingCandidateId, setRenderingCandidateId] = useState<string | null>(null);
+  const [showStyleModal, setShowStyleModal] = useState(false);
+  const [selectedStyle, setSelectedStyle] = useState("modern-box");
+  const [mediaPathToImport, setMediaPathToImport] = useState<string | null>(null);
 
   const transcript = useMemo(() => {
     if (!detail?.transcript) return null;
@@ -129,6 +134,10 @@ function App() {
   const selectedCutCount = selectedCandidates.filter((candidate) => {
     const clip = clipByCandidate.get(candidate.id);
     return clip?.status === "done" && Boolean(clip.outputPath);
+  }).length;
+  const selectedCaptionsCount = selectedCandidates.filter((candidate) => {
+    const clip = clipByCandidate.get(candidate.id);
+    return clip?.status === "done" && Boolean(clip.captionAssPath);
   }).length;
   const canUseCloudKey = environment?.hasDeepgramKey || deepgramKey.trim().length > 0;
   const canUseClaude = environment?.hasAnthropicKey || anthropicKey.trim().length > 0;
@@ -171,21 +180,32 @@ function App() {
   }
 
   async function importMedia() {
+    const selected = await open({
+      multiple: false,
+      filters: [
+        {
+          name: "Media",
+          extensions: ["mp4", "mov", "mp3", "wav", "m4a"],
+        },
+      ],
+    });
+    if (typeof selected !== "string") return;
+    setMediaPathToImport(selected);
+    setShowStyleModal(true);
+  }
+
+  async function confirmImport(style: string) {
+    if (!mediaPathToImport) return;
+    const selected = mediaPathToImport;
+    setMediaPathToImport(null);
+    setShowStyleModal(false);
+
     let newProjectId: string | null = null;
     await run("import", async () => {
-      const selected = await open({
-        multiple: false,
-        filters: [
-          {
-            name: "Media",
-            extensions: ["mp4", "mov", "mp3", "wav", "m4a"],
-          },
-        ],
-      });
-      if (typeof selected !== "string") return;
       const project = await invoke<Project>("create_project_from_path", {
         path: selected,
         transcriptionMode: "cloud",
+        captionStyle: style,
       });
       newProjectId = project.id;
       await refresh(project.id);
@@ -325,20 +345,36 @@ function App() {
 
   async function cutCandidate(candidateId: string) {
     if (!detail) return;
-    await run("cut", async () => {
+    setRenderingCandidateId(candidateId);
+    setBusy("cut");
+    setError(null);
+    try {
       await invoke<string>("render_flat_clip_for_candidate", { candidateId });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setRenderingCandidateId(null);
+      setBusy("idle");
       await refresh(detail.project.id);
-    });
+    }
   }
 
   async function cutSelected() {
     if (!detail) return;
-    await run("cut", async () => {
+    setBusy("cut");
+    setError(null);
+    try {
       for (const candidate of selectedCandidates) {
+        setRenderingCandidateId(candidate.id);
         await invoke<string>("render_flat_clip_for_candidate", { candidateId: candidate.id });
       }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setRenderingCandidateId(null);
+      setBusy("idle");
       await refresh(detail.project.id);
-    });
+    }
   }
 
   return (
@@ -456,8 +492,8 @@ function App() {
                 <PipelineStep icon={<AudioLines size={16} />} label="Transcript" done={Boolean(detail.transcript)} />
                 <PipelineStep icon={<Sparkles size={16} />} label="Moments" done={detail.candidates.length > 0} />
                 <PipelineStep icon={<Scissors size={16} />} label="Cut" done={selectedCount > 0 && selectedCutCount === selectedCount} />
-                <PipelineStep icon={<Captions size={16} />} label="Captions" done={false} />
-                <PipelineStep icon={<Download size={16} />} label="Export" done={false} />
+                <PipelineStep icon={<Captions size={16} />} label="Captions" done={selectedCount > 0 && selectedCaptionsCount === selectedCount} />
+                <PipelineStep icon={<Download size={16} />} label="Export" done={selectedCount > 0 && selectedCutCount === selectedCount} />
               </div>
 
               <div className="work-grid">
@@ -571,11 +607,20 @@ function App() {
                                 onClick={() => void cutCandidate(candidate.id)}
                                 disabled={busy !== "idle" || !environment?.hasFfmpeg}
                               >
-                                {busy === "cut" ? <Loader2 className="spin" size={14} /> : <Scissors size={14} />}
-                                {isCut ? "Re-cut" : "Cut"}
+                                {renderingCandidateId === candidate.id ? (
+                                  <Loader2 className="spin" size={14} />
+                                ) : (
+                                  <Scissors size={14} />
+                                )}
+                                {renderingCandidateId === candidate.id ? "Cutting..." : isCut ? "Re-cut" : "Cut"}
                               </button>
                             </div>
                             {clip?.outputPath && <div className="output-path">{clip.outputPath}</div>}
+                            {clip?.captionAssPath && (
+                              <div className="output-path" style={{ background: "rgba(142, 230, 199, 0.05)", borderColor: "var(--accent-primary)", color: "var(--accent-primary)", marginTop: "4px" }}>
+                                Subtitles: {clip.captionAssPath}
+                              </div>
+                            )}
                             {clip?.renderLog && <div className="render-log">{clip.renderLog}</div>}
                           </div>
                         </article>
@@ -655,6 +700,105 @@ function App() {
           </div>
         </div>
       </footer>
+
+      {showStyleModal && (
+        <div className="style-modal-overlay">
+          <div className="style-modal">
+            <div className="style-modal-header">
+              <h3>Choose Caption Style</h3>
+              <p>Select how your automated captions should look on the portrait short-form video clips.</p>
+            </div>
+            
+            <div className="style-grid">
+              <div 
+                className={`style-card ${selectedStyle === "modern-box" ? "selected" : ""}`}
+                onClick={() => setSelectedStyle("modern-box")}
+              >
+                <div className="style-preview-box">
+                  <span className="preview-text-box">BRAINFOOD BECAUSE</span>
+                </div>
+                <div className="style-card-title">Modern Box</div>
+                <div className="style-card-desc">Sleek white text inside a semi-transparent black background padding box. Highly readable.</div>
+              </div>
+
+              <div 
+                className={`style-card ${selectedStyle === "classic-outline" ? "selected" : ""}`}
+                onClick={() => setSelectedStyle("classic-outline")}
+              >
+                <div className="style-preview-box">
+                  <span className="preview-text-outline">BRAINFOOD BECAUSE</span>
+                </div>
+                <div className="style-card-title">Classic Outline</div>
+                <div className="style-card-desc">Vibrant bold yellow text with a clean black outline. High-energy CapCut formatting.</div>
+              </div>
+
+              <div 
+                className={`style-card ${selectedStyle === "minimal-shadow" ? "selected" : ""}`}
+                onClick={() => setSelectedStyle("minimal-shadow")}
+              >
+                <div className="style-preview-box">
+                  <span className="preview-text-shadow">BRAINFOOD BECAUSE</span>
+                </div>
+                <div className="style-card-title">Minimal Shadow</div>
+                <div className="style-card-desc">Pure white text with a soft, elegant drop shadow. Unobtrusive and modern.</div>
+              </div>
+
+              <div 
+                className={`style-card ${selectedStyle === "vibrant-cyan" ? "selected" : ""}`}
+                onClick={() => setSelectedStyle("vibrant-cyan")}
+              >
+                <div className="style-preview-box">
+                  <span className="preview-text-cyan">BRAINFOOD BECAUSE</span>
+                </div>
+                <div className="style-card-title">Vibrant Cyan</div>
+                <div className="style-card-desc">Vibrant tech cyan text with a black drop shadow for a clean look.</div>
+              </div>
+
+              <div 
+                className={`style-card ${selectedStyle === "vibrant-yellow-box" ? "selected" : ""}`}
+                onClick={() => setSelectedStyle("vibrant-yellow-box")}
+              >
+                <div className="style-preview-box">
+                  <span className="preview-text-yellow-box">BRAINFOOD BECAUSE</span>
+                </div>
+                <div className="style-card-title">Vibrant Yellow Box</div>
+                <div className="style-card-desc">Bold black text inside a solid yellow padding box. Punchy and high visibility.</div>
+              </div>
+
+              <div 
+                className={`style-card ${selectedStyle === "vibrant-green" ? "selected" : ""}`}
+                onClick={() => setSelectedStyle("vibrant-green")}
+              >
+                <div className="style-preview-box">
+                  <span className="preview-text-green">BRAINFOOD BECAUSE</span>
+                </div>
+                <div className="style-card-title">Vibrant Green</div>
+                <div className="style-card-desc">High-energy neon green text with black borders and a drop shadow (Hormozi style).</div>
+              </div>
+
+              <div 
+                className={`style-card ${selectedStyle === "vibrant-red" ? "selected" : ""}`}
+                onClick={() => setSelectedStyle("vibrant-red")}
+              >
+                <div className="style-preview-box">
+                  <span className="preview-text-red">BRAINFOOD BECAUSE</span>
+                </div>
+                <div className="style-card-title">Vibrant Red</div>
+                <div className="style-card-desc">Dramatic neon crimson text with outline and drop shadow (gaming/action style).</div>
+              </div>
+            </div>
+
+            <div className="style-modal-actions">
+              <button className="btn-cancel" onClick={() => { setShowStyleModal(false); setMediaPathToImport(null); }}>
+                Cancel
+              </button>
+              <button className="btn-confirm" onClick={() => confirmImport(selectedStyle)}>
+                Confirm & Import
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

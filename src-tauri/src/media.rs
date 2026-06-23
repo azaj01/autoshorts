@@ -106,6 +106,7 @@ pub fn render_flat_clip(
     start_sec: f64,
     end_sec: f64,
     output_path: &Path,
+    drawtext_filters: Option<&str>,
 ) -> Result<PathBuf> {
     if !command_exists("ffmpeg") {
         return Err(anyhow!("ffmpeg is not installed or not available on PATH"));
@@ -125,11 +126,13 @@ pub fn render_flat_clip(
     cmd.args(["-y", "-i", source_path, "-ss", &start, "-to", &end]);
 
     if has_video {
-        // Crop video to 9:16 portrait/vertical format while ensuring dimensions are even
-        cmd.args([
-            "-vf",
-            "crop=w='2*trunc(min(iw,ih*9/16)/2)':h='2*trunc(min(ih,iw*16/9)/2)'",
-        ]);
+        let mut filter = "crop=w='2*trunc(min(iw,ih*9/16)/2)':h='2*trunc(min(ih,iw*16/9)/2)'".to_string();
+        if let Some(drawtext) = drawtext_filters {
+            if !drawtext.is_empty() {
+                filter = format!("{},{}", filter, drawtext);
+            }
+        }
+        cmd.args(["-vf", &filter]);
         cmd.args(["-c:v", "libx264", "-preset", "fast", "-crf", "18", "-pix_fmt", "yuv420p"]);
     } else {
         cmd.arg("-vn");

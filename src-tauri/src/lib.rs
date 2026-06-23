@@ -42,6 +42,7 @@ fn create_project_from_path(
     state: tauri::State<'_, AppState>,
     path: String,
     transcription_mode: String,
+    caption_style: String,
 ) -> Result<Project, String> {
     validate_media_extension(&path).map_err(to_command_error)?;
     let probe = media::probe_media(&path).ok();
@@ -51,6 +52,7 @@ fn create_project_from_path(
         .create_project(
             &path,
             &transcription_mode,
+            &caption_style,
             probe.and_then(|probe| probe.duration_sec),
         )
         .map_err(to_command_error)
@@ -244,34 +246,107 @@ fn render_flat_clip_for_candidate(
         .map_err(to_command_error)?;
     state
         .db
-        .update_clip_for_candidate(&candidate_id, "cutting", None, None)
+        .update_clip_for_candidate(&candidate_id, "cutting", None, None, None)
         .map_err(to_command_error)?;
 
     let output_path = documents_project_dir(&project)?
         .join("clips")
         .join(format!("clip-{:02}_flat.mp4", candidate.rank));
 
+    let mut srt_path = None;
+    let mut drawtext_filters = None;
+
+    let probe = media::probe_media(&project.source_path).ok();
+    let cropped_width = if let Some(p) = &probe {
+        let iw = p.width.unwrap_or(1920) as f64;
+        let ih = p.height.unwrap_or(1080) as f64;
+        let w = (iw.min(ih * 9.0 / 16.0) / 2.0).floor() * 2.0;
+        w as i64
+    } else {
+        1080
+    };
+
+    if let Ok(Some(transcript_record)) = state.db.latest_transcript(&project.id) {
+        if let Ok(normalized) = serde_json::from_str::<NormalizedTranscript>(&transcript_record.raw_json) {
+            let srt_content = generate_srt(&normalized.words, candidate.start_sec, candidate.end_sec);
+            let clip_srt_path = project_dir(&state, &project.id).join(format!("clip-{}.srt", candidate.id));
+            if std::fs::write(&clip_srt_path, srt_content).is_ok() {
+                srt_path = Some(clip_srt_path);
+            }
+            let style = project.caption_style.as_deref().unwrap_or("modern-box");
+            let drawtext = build_drawtext_filters(
+                &normalized.words,
+                candidate.start_sec,
+                candidate.end_sec,
+                cropped_width,
+                style,
+            );
+            if !drawtext.is_empty() {
+                drawtext_filters = Some(drawtext);
+            }
+        }
+    }
+
     match media::render_flat_clip(
         &project.source_path,
         candidate.start_sec,
         candidate.end_sec,
         &output_path,
+        drawtext_filters.as_deref(),
     ) {
         Ok(path) => {
             let path_string = path.to_string_lossy().to_string();
+            let srt_string = srt_path.map(|p| p.to_string_lossy().to_string());
             state
                 .db
-                .update_clip_for_candidate(&candidate_id, "done", Some(&path_string), None)
+                .update_clip_for_candidate(
+                    &candidate_id,
+                    "done",
+                    Some(&path_string),
+                    srt_string.as_deref(),
+                    None,
+                )
                 .map_err(to_command_error)?;
             Ok(path_string)
         }
         Err(error) => {
-            let message = error.to_string();
-            state
-                .db
-                .update_clip_for_candidate(&candidate_id, "error", None, Some(&message))
-                .map_err(to_command_error)?;
-            Err(message)
+            let err_msg = error.to_string();
+            // Fallback retry rendering without captions overlay on any error
+            match media::render_flat_clip(
+                &project.source_path,
+                candidate.start_sec,
+                candidate.end_sec,
+                &output_path,
+                None,
+            ) {
+                Ok(path) => {
+                    let path_string = path.to_string_lossy().to_string();
+                    let srt_string = srt_path.map(|p| p.to_string_lossy().to_string());
+                    let warning_msg = format!(
+                        "Clip rendered successfully, but captions were skipped. Error: {}",
+                        err_msg
+                    );
+                    state
+                        .db
+                        .update_clip_for_candidate(
+                            &candidate_id,
+                            "done",
+                            Some(&path_string),
+                            srt_string.as_deref(),
+                            Some(&warning_msg),
+                        )
+                        .map_err(to_command_error)?;
+                    Ok(path_string)
+                }
+                Err(retry_err) => {
+                    let message = retry_err.to_string();
+                    state
+                        .db
+                        .update_clip_for_candidate(&candidate_id, "error", None, None, Some(&message))
+                        .map_err(to_command_error)?;
+                    Err(message)
+                }
+            }
         }
     }
 }
@@ -421,4 +496,171 @@ fn demo_transcript() -> NormalizedTranscript {
 
 fn to_command_error(error: impl std::fmt::Display) -> String {
     error.to_string()
+}
+
+fn generate_srt(words: &[TranscriptWord], start_sec: f64, end_sec: f64) -> String {
+    let mut srt = String::new();
+    let mut index = 1;
+
+    let candidate_words: Vec<&TranscriptWord> = words
+        .iter()
+        .filter(|w| w.end > start_sec && w.start < end_sec)
+        .collect();
+
+    for chunk in candidate_words.chunks(3) {
+        if chunk.is_empty() {
+            continue;
+        }
+        let first = chunk[0];
+        let last = chunk[chunk.len() - 1];
+
+        let start_rel = (first.start - start_sec).max(0.0);
+        let end_rel = (last.end - start_sec).min(end_sec - start_sec).max(0.0);
+
+        let text = chunk
+            .iter()
+            .map(|w| w.text.as_str())
+            .collect::<Vec<_>>()
+            .join(" ");
+
+        srt.push_str(&format!("{index}\n"));
+        srt.push_str(&format!(
+            "{}\n",
+            format_srt_time(start_rel, end_rel)
+        ));
+        srt.push_str(&format!("{text}\n\n"));
+        index += 1;
+    }
+
+    srt
+}
+
+fn format_srt_time(start: f64, end: f64) -> String {
+    let format_time = |secs: f64| {
+        let hours = (secs / 3600.0) as u32;
+        let mins = ((secs % 3600.0) / 60.0) as u32;
+        let secs_only = (secs % 60.0) as u32;
+        let ms = ((secs.fract()) * 1000.0) as u32;
+        format!("{hours:02}:{mins:02}:{secs_only:02},{ms:03}")
+    };
+    format!("{} --> {}", format_time(start), format_time(end))
+}
+
+fn build_drawtext_filters(
+    words: &[TranscriptWord],
+    start_sec: f64,
+    end_sec: f64,
+    cropped_width: i64,
+    caption_style: &str,
+) -> String {
+    let mut drawtext_filters = Vec::new();
+
+    let candidate_words: Vec<&TranscriptWord> = words
+        .iter()
+        .filter(|w| w.end > start_sec && w.start < end_sec)
+        .collect();
+
+    // Group into chunks of 2 words for fast-paced style captions
+    for chunk in candidate_words.chunks(2) {
+        if chunk.is_empty() {
+            continue;
+        }
+        let first = chunk[0];
+        let last = chunk[chunk.len() - 1];
+
+        // Absolute timestamps for FFmpeg filter graph (due to output seeking keeping original PTS)
+        let start_rel = first.start;
+        let end_rel = last.end;
+        if end_rel <= start_rel {
+            continue;
+        }
+
+        let text = chunk
+            .iter()
+            .map(|w| w.text.to_uppercase())
+            .collect::<Vec<_>>()
+            .join(" ");
+
+        // Clean text to avoid breaking filter parameters
+        let clean_text: String = text.chars()
+            .filter(|c| c.is_alphanumeric() || *c == ' ' || *c == '!' || *c == '?')
+            .collect();
+
+        // Responsive font size and padding box
+        let fontsize = ((cropped_width as f64) * 0.075).clamp(16.0, 80.0).round() as i64;
+        let padding = ((fontsize as f64) * 0.3).clamp(4.0, 24.0).round() as i64;
+
+        // Premium system font hierarchy
+        let font_paths = [
+            "/System/Library/Fonts/Supplemental/Futura.ttc",
+            "/System/Library/Fonts/Avenir Next.ttc",
+            "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+            "/System/Library/Fonts/Helvetica.ttc",
+        ];
+        let mut font_option = String::new();
+        for path in &font_paths {
+            if std::path::Path::new(path).exists() {
+                font_option = format!("fontfile='{}':", path);
+                break;
+            }
+        }
+        
+        let drawtext = match caption_style {
+            "classic-outline" => {
+                // Classic yellow text with a bold outline (CapCut style)
+                let borderw = ((fontsize as f64) * 0.1).clamp(2.0, 8.0).round() as i64;
+                format!(
+                    "drawtext={}text='{}':x=(w-text_w)/2:y=h*0.65:fontsize={}:fontcolor=yellow:borderw={}:bordercolor=black:enable='between(t,{:.3},{:.3})'",
+                    font_option, clean_text, fontsize, borderw, start_rel, end_rel
+                )
+            }
+            "minimal-shadow" => {
+                // Sleek white text with a soft drop shadow (Minimalist)
+                format!(
+                    "drawtext={}text='{}':x=(w-text_w)/2:y=h*0.7:fontsize={}:fontcolor=white:shadowcolor=black@0.5:shadowx=2:shadowy=2:enable='between(t,{:.3},{:.3})'",
+                    font_option, clean_text, fontsize, start_rel, end_rel
+                )
+            }
+            "vibrant-cyan" => {
+                // Modern Avenir Next look with clean cyan color and thin shadow
+                format!(
+                    "drawtext={}text='{}':x=(w-text_w)/2:y=h*0.7:fontsize={}:fontcolor=0x00FFFF:shadowcolor=black@0.6:shadowx=2:shadowy=2:enable='between(t,{:.3},{:.3})'",
+                    font_option, clean_text, fontsize, start_rel, end_rel
+                )
+            }
+            "vibrant-yellow-box" => {
+                // Vibrant black text inside a solid yellow background box (Motivational/TikTok style)
+                format!(
+                    "drawtext={}text='{}':x=(w-text_w)/2:y=h*0.72:fontsize={}:fontcolor=black:box=1:boxcolor=0xffff00e0:boxborderw={}:enable='between(t,{:.3},{:.3})'",
+                    font_option, clean_text, fontsize, padding, start_rel, end_rel
+                )
+            }
+            "vibrant-green" => {
+                // High-energy neon green text with outline & drop shadow (Hormozi style)
+                let borderw = ((fontsize as f64) * 0.08).clamp(1.5, 6.0).round() as i64;
+                format!(
+                    "drawtext={}text='{}':x=(w-text_w)/2:y=h*0.7:fontsize={}:fontcolor=0x39FF14:borderw={}:bordercolor=black:shadowcolor=black@0.6:shadowx=2:shadowy=2:enable='between(t,{:.3},{:.3})'",
+                    font_option, clean_text, fontsize, borderw, start_rel, end_rel
+                )
+            }
+            "vibrant-red" => {
+                // Dramatic red text with outline & drop shadow (Gaming/Drama style)
+                let borderw = ((fontsize as f64) * 0.08).clamp(1.5, 6.0).round() as i64;
+                format!(
+                    "drawtext={}text='{}':x=(w-text_w)/2:y=h*0.7:fontsize={}:fontcolor=0xFF3B30:borderw={}:bordercolor=black:shadowcolor=black@0.6:shadowx=2:shadowy=2:enable='between(t,{:.3},{:.3})'",
+                    font_option, clean_text, fontsize, borderw, start_rel, end_rel
+                )
+            }
+            _ => {
+                // modern-box (Default): white text with clean box background
+                format!(
+                    "drawtext={}text='{}':x=(w-text_w)/2:y=h*0.72:fontsize={}:fontcolor=white:box=1:boxcolor=0x000000b0:boxborderw={}:enable='between(t,{:.3},{:.3})'",
+                    font_option, clean_text, fontsize, padding, start_rel, end_rel
+                )
+            }
+        };
+        drawtext_filters.push(drawtext);
+    }
+
+    drawtext_filters.join(",")
 }

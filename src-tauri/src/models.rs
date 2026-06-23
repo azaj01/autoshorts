@@ -32,6 +32,7 @@ pub struct Project {
     pub source_duration: Option<f64>,
     pub status: String,
     pub transcription_mode: String,
+    pub caption_style: Option<String>,
     pub created_at: String,
     pub updated_at: String,
 }
