@@ -592,10 +592,18 @@ fn build_drawtext_filters(
 
         // Premium system font hierarchy
         let font_paths = [
+            // macOS
             "/System/Library/Fonts/Supplemental/Futura.ttc",
             "/System/Library/Fonts/Avenir Next.ttc",
             "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
             "/System/Library/Fonts/Helvetica.ttc",
+            // Windows
+            "C:/Windows/Fonts/SegoeUIb.ttf",
+            "C:/Windows/Fonts/arialbd.ttf",
+            "C:/Windows/Fonts/arial.ttf",
+            // Linux
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+            "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
         ];
         let mut font_option = String::new();
         for path in &font_paths {
