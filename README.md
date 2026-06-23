@@ -4,6 +4,8 @@ AutoShorts is a local-first desktop application for turning long-form video or a
 
 This repository implements the desktop app foundation using **Tauri 2 + React + TSX + Rust + SQLite**.
 
+<img width="1397" height="918" alt="Screenshot 2026-06-22 at 4 10 13 PM" src="https://github.com/user-attachments/assets/3a58ff60-6d9b-46fc-81e8-2778c96aba62" />
+
 ---
 
 ## Key Features
