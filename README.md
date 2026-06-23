@@ -99,4 +99,4 @@ If AutoShorts helps you create content faster, consider supporting its developme
 
 Your support helps fund new features, bug fixes, and ongoing improvements.
 
-👉 **Support AutoShorts:** https://polar.sh/checkout/polar_c_eZfQSAesVTAhaNyDtC8GnzySlU1yqflU62wwg2EfFDF
+👉 https://polar.sh/checkout/polar_c_eZfQSAesVTAhaNyDtC8GnzySlU1yqflU62wwg2EfFDF
