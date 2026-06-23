@@ -93,7 +93,9 @@ npm run tauri:build
 ```
 The output installers will be built under `src-tauri/target/release/bundle/`.
 
-[Support AutoShorts](#support-autoshorts)
+<a id="support"></a>
+
+## ❤️ Support AutoShorts
 
 If AutoShorts helps you create content faster, consider supporting its development.
 
