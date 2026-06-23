@@ -1,3 +1,5 @@
+⭐ [Support AutoShorts](#-support-autoshorts)
+
 # AutoShorts
 
 AutoShorts is a local-first desktop application for turning long-form video or audio recordings into high-impact, vertical short-form clip candidates (9:16 portrait) with AI-powered viral moment ranking.
@@ -90,3 +92,11 @@ To build and package the native macOS app bundle (`.app` and `.dmg` installer):
 npm run tauri:build
 ```
 The output installers will be built under `src-tauri/target/release/bundle/`.
+
+## ❤️ Support AutoShorts
+
+If AutoShorts helps you create content faster, consider supporting its development.
+
+Your support helps fund new features, bug fixes, and ongoing improvements.
+
+👉 **Support AutoShorts:** https://polar.sh/checkout/polar_c_eZfQSAesVTAhaNyDtC8GnzySlU1yqflU62wwg2EfFDF
