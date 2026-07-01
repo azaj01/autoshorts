@@ -51,6 +51,9 @@ async fn environment_status(state: tauri::State<'_, AppState>) -> Result<Environ
         has_deepgram_key: std::env::var("DEEPGRAM_API_KEY").is_ok(),
         has_anthropic_key: std::env::var("ANTHROPIC_API_KEY").is_ok(),
         has_deepseek_key: std::env::var("DEEPSEEK_API_KEY").is_ok(),
+        has_gemini_key: std::env::var("GEMINI_API_KEY").is_ok(),
+        has_openai_key: std::env::var("OPENAI_API_KEY").is_ok(),
+        has_openrouter_key: std::env::var("OPENROUTER_API_KEY").is_ok(),
         llm_provider,
         has_local_whisper_model,
         has_ollama,
@@ -453,6 +456,30 @@ async fn generate_candidates(
                 .or_else(|| std::env::var("OLLAMA_MODEL").ok())
                 .unwrap_or_else(|| "llama3.2".to_string());
             llm::detect_candidates_with_local_llm(&normalized, &model)
+                .await
+                .map_err(to_command_error)?
+        }
+        "gemini" => {
+            let key = api_key
+                .or_else(|| std::env::var("GEMINI_API_KEY").ok())
+                .ok_or_else(|| "Set GEMINI_API_KEY or supply Gemini API Key to generate candidates.".to_string())?;
+            llm::detect_candidates_with_gemini(&normalized, &key)
+                .await
+                .map_err(to_command_error)?
+        }
+        "openai" => {
+            let key = api_key
+                .or_else(|| std::env::var("OPENAI_API_KEY").ok())
+                .ok_or_else(|| "Set OPENAI_API_KEY or supply OpenAI API Key to generate candidates.".to_string())?;
+            llm::detect_candidates_with_openai(&normalized, &key)
+                .await
+                .map_err(to_command_error)?
+        }
+        "openrouter" => {
+            let key = api_key
+                .or_else(|| std::env::var("OPENROUTER_API_KEY").ok())
+                .ok_or_else(|| "Set OPENROUTER_API_KEY or supply OpenRouter API Key to generate candidates.".to_string())?;
+            llm::detect_candidates_with_openrouter(&normalized, &key)
                 .await
                 .map_err(to_command_error)?
         }
